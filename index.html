@@ -1,0 +1,857 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Patient.com — Strategic Outcomes & Data Architecture</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --blue-50: #E6F1FB; --blue-100: #B5D4F4; --blue-600: #185FA5; --blue-800: #0C447C; --blue-900: #042C53;
+    --green-50: #EAF3DE; --green-100: #C0DD97; --green-600: #3B6D11; --green-800: #27500A; --green-900: #173404;
+    --amber-50: #FAEEDA; --amber-100: #FAC775; --amber-600: #854F0B; --amber-800: #633806; --amber-900: #412402;
+    --purple-50: #EEEDFE; --purple-100: #CECBF6; --purple-600: #534AB7; --purple-800: #3C3489; --purple-900: #26215C;
+    --gray-50: #F1EFE8; --gray-100: #D3D1C7; --gray-400: #888780; --gray-600: #5F5E5A; --gray-900: #2C2C2A;
+    --teal-50: #E1F5EE; --teal-600: #0F6E56; --teal-800: #085041;
+    --coral-50: #FAECE7; --coral-600: #993C1D; --coral-800: #712B13;
+    --white: #ffffff;
+    --border: #e2e0d8;
+    --text-muted: #6b6a63;
+    --text-body: #2c2c2a;
+    --bg: #f8f7f3;
+    --shadow: 0 1px 3px rgba(0,0,0,0.08), 0 0 0 0.5px rgba(0,0,0,0.06);
+  }
+
+  body {
+    font-family: 'DM Sans', system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text-body);
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  .page-wrap {
+    min-width: 1100px;
+    padding: 28px 24px 48px;
+  }
+
+  /* ─── Page header ─── */
+  .page-header {
+    display: flex; align-items: flex-start; justify-content: space-between;
+    margin-bottom: 20px; gap: 24px;
+  }
+  .page-title {
+    font-size: 18px; font-weight: 600; color: var(--gray-900);
+    letter-spacing: -0.3px; line-height: 1.2;
+  }
+  .page-subtitle {
+    font-size: 11.5px; color: var(--text-muted); margin-top: 4px;
+  }
+  .legend {
+    display: flex; align-items: center; gap: 16px; flex-wrap: wrap;
+    font-size: 11px; color: var(--text-muted);
+  }
+  .legend-item { display: flex; align-items: center; gap: 5px; }
+  .legend-dot {
+    width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0;
+  }
+  .flow-note {
+    background: var(--white); border: 0.5px solid var(--border);
+    border-radius: 6px; padding: 6px 10px;
+    font-size: 10.5px; color: var(--text-muted); white-space: nowrap;
+  }
+
+  /* ─── Main table ─── */
+  .matrix {
+    width: 100%;
+    border-collapse: separate;
+    border-spacing: 0;
+    border: 0.5px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    background: var(--white);
+    box-shadow: var(--shadow);
+  }
+
+  /* Column headers */
+  .col-head {
+    background: var(--gray-900);
+    color: var(--white);
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+    text-transform: uppercase;
+    padding: 10px 12px;
+    border-right: 0.5px solid rgba(255,255,255,0.12);
+    white-space: nowrap;
+  }
+  .col-head:last-child { border-right: none; }
+  .col-head .sub { font-weight: 400; opacity: 0.65; letter-spacing: 0; text-transform: none; display: block; margin-top: 2px; }
+
+  /* Category cell */
+  .cat-cell {
+    vertical-align: top;
+    padding: 16px 14px;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+    width: 150px; min-width: 150px;
+  }
+  .cat-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    border-radius: 20px; padding: 5px 10px 5px 6px;
+    font-size: 11.5px; font-weight: 600; margin-bottom: 10px;
+  }
+  .cat-icon {
+    width: 22px; height: 22px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; flex-shrink: 0;
+  }
+  .cat-outcome {
+    font-size: 10.5px; color: var(--text-muted); line-height: 1.5;
+  }
+  .cat-outcome strong { display: block; font-size: 10px; font-weight: 600; color: var(--text-body); margin-bottom: 4px; letter-spacing: 0.3px; text-transform: uppercase; }
+
+  /* Blue category */
+  .cat-blue .cat-badge { background: var(--blue-50); color: var(--blue-800); }
+  .cat-blue .cat-icon { background: var(--blue-600); color: #fff; }
+
+  /* Green category */
+  .cat-green .cat-badge { background: var(--green-50); color: var(--green-800); }
+  .cat-green .cat-icon { background: var(--green-600); color: #fff; }
+
+  /* Amber category */
+  .cat-amber .cat-badge { background: var(--amber-50); color: var(--amber-800); }
+  .cat-amber .cat-icon { background: var(--amber-600); color: #fff; }
+
+  /* Purple category */
+  .cat-purple .cat-badge { background: var(--purple-50); color: var(--purple-800); }
+  .cat-purple .cat-icon { background: var(--purple-600); color: #fff; }
+
+  /* Capability cell */
+  .cap-cell {
+    vertical-align: top;
+    padding: 10px 12px;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+    width: 170px; min-width: 170px;
+  }
+  .cap-num {
+    display: inline-block;
+    width: 18px; height: 18px; border-radius: 50%;
+    font-size: 9.5px; font-weight: 600; line-height: 18px;
+    text-align: center; flex-shrink: 0; margin-right: 6px;
+    vertical-align: middle;
+  }
+  .cap-name {
+    font-size: 11.5px; font-weight: 600; color: var(--text-body);
+    display: flex; align-items: flex-start; gap: 0; line-height: 1.35;
+  }
+  .cap-name .cap-num { margin-top: 1px; flex-shrink: 0; }
+  .cap-desc {
+    font-size: 10px; color: var(--text-muted); margin-top: 5px; line-height: 1.5;
+    padding-left: 24px;
+  }
+
+  /* Blue caps */
+  .cap-blue .cap-num { background: var(--blue-100); color: var(--blue-800); }
+  .cap-green .cap-num { background: var(--green-100); color: var(--green-800); }
+  .cap-amber .cap-num { background: var(--amber-100); color: var(--amber-800); }
+  .cap-purple .cap-num { background: var(--purple-100); color: var(--purple-800); }
+
+  /* Enablement / Approaches cell */
+  .enab-cell {
+    vertical-align: top;
+    padding: 10px 12px;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+    width: 210px; min-width: 200px;
+  }
+  .enab-item {
+    display: flex; align-items: flex-start; gap: 6px;
+    margin-bottom: 5px; font-size: 10.5px; color: var(--text-body); line-height: 1.4;
+  }
+  .enab-item:last-child { margin-bottom: 0; }
+  .enab-dot {
+    width: 5px; height: 5px; border-radius: 50%; flex-shrink: 0;
+    margin-top: 4px;
+  }
+  .enab-label {
+    font-size: 9px; font-weight: 600; letter-spacing: 0.4px; text-transform: uppercase;
+    margin-bottom: 3px; opacity: 0.7;
+  }
+  .enab-sub {
+    font-size: 9.5px; color: var(--text-muted); padding-left: 11px;
+    line-height: 1.45; margin-top: 2px;
+  }
+
+  .enab-blue .enab-dot { background: var(--blue-600); }
+  .enab-green .enab-dot { background: var(--green-600); }
+  .enab-amber .enab-dot { background: var(--amber-600); }
+  .enab-purple .enab-dot { background: var(--purple-600); }
+
+  /* Questions cell */
+  .q-cell {
+    vertical-align: top;
+    padding: 10px 12px;
+    border-right: 0.5px solid var(--border);
+    border-bottom: 0.5px solid var(--border);
+    width: 200px; min-width: 190px;
+  }
+  .q-item {
+    display: flex; align-items: flex-start; gap: 5px;
+    margin-bottom: 4px; font-size: 10px; color: var(--text-body); line-height: 1.45;
+  }
+  .q-item:last-child { margin-bottom: 0; }
+  .q-bullet { flex-shrink: 0; margin-top: 3px; color: var(--text-muted); font-size: 9px; }
+  .q-dash { color: var(--text-muted); font-size: 11px; }
+
+  /* Dataset cell */
+  .ds-cell {
+    vertical-align: top;
+    padding: 10px 12px;
+    border-bottom: 0.5px solid var(--border);
+    width: 200px; min-width: 190px;
+  }
+  .ds-item {
+    display: flex; align-items: flex-start; gap: 5px;
+    margin-bottom: 4px; font-size: 10px; line-height: 1.45;
+  }
+  .ds-item:last-child { margin-bottom: 0; }
+  .ds-letter {
+    font-size: 9px; font-weight: 600; flex-shrink: 0;
+    width: 14px; text-align: center; margin-top: 1px;
+    border-radius: 2px; padding: 1px 0;
+    font-family: 'DM Mono', monospace;
+  }
+  .ds-blue .ds-letter { background: var(--blue-50); color: var(--blue-800); }
+  .ds-green .ds-letter { background: var(--green-50); color: var(--green-800); }
+  .ds-amber .ds-letter { background: var(--amber-50); color: var(--amber-800); }
+  .ds-purple .ds-letter { background: var(--purple-50); color: var(--purple-800); }
+
+  /* Row separators */
+  tr.cat-sep td { border-bottom: 2.5px solid var(--border) !important; }
+  tr:last-child td { border-bottom: none !important; }
+
+  /* Connector arrow between columns (visual only) */
+  .arrow-col { width: 14px; min-width: 14px; padding: 0 !important; border-right: none !important; border-bottom: 0.5px solid var(--border) !important; background: var(--gray-50); }
+  .arrow-col-inner { display: flex; align-items: center; justify-content: center; height: 100%; }
+  .arr-svg { width: 10px; height: 10px; opacity: 0.35; }
+
+  /* Footer */
+  .page-footer {
+    margin-top: 18px; display: flex; align-items: center; justify-content: space-between;
+    font-size: 10px; color: var(--text-muted);
+  }
+  .req-types { display: flex; gap: 8px; flex-wrap: wrap; }
+  .req-tag {
+    border: 0.5px solid var(--border); border-radius: 4px; padding: 4px 8px;
+    font-size: 10px; background: var(--white);
+  }
+</style>
+</head>
+<body>
+<div class="page-wrap">
+
+  <!-- Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Patient.com — Strategic Outcomes &amp; Data Architecture</div>
+      <div class="page-subtitle">Capability map across classes · Data flow: Class → Capability → Enablement / Questions / Datasets</div>
+    </div>
+    <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+      <div class="legend">
+        <span class="legend-item"><span class="legend-dot" style="background:var(--blue-600)"></span> Patient.com Consumer Portal</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--green-600)"></span> Product Team</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--amber-600)"></span> Business Team</span>
+        <span class="legend-item"><span class="legend-dot" style="background:var(--purple-600)"></span> Finance</span>
+      </div>
+      <div class="flow-note">Flow: Class → Capability → Data Enablement / Questions / Datasets</div>
+    </div>
+  </div>
+
+  <!-- Matrix table -->
+  <table class="matrix">
+    <colgroup>
+      <col style="width:150px">
+      <col style="width:14px"> <!-- arrow -->
+      <col style="width:178px">
+      <col style="width:14px"> <!-- arrow -->
+      <col style="width:215px">
+      <col style="width:14px"> <!-- arrow -->
+      <col style="width:205px">
+      <col style="width:14px"> <!-- arrow -->
+      <col>
+    </colgroup>
+    <thead>
+      <tr>
+        <th class="col-head">Class <span class="sub">Outcome</span></th>
+        <th class="col-head" style="width:14px;padding:0;border-right:0.5px solid rgba(255,255,255,0.1)"></th>
+        <th class="col-head">Capabilities</th>
+        <th class="col-head" style="width:14px;padding:0;border-right:0.5px solid rgba(255,255,255,0.1)"></th>
+        <th class="col-head">Data Enablement Process <span class="sub">How we deliver / operationalize</span></th>
+        <th class="col-head" style="width:14px;padding:0;border-right:0.5px solid rgba(255,255,255,0.1)"></th>
+        <th class="col-head">Potential Questions <span class="sub">Business / Product questions</span></th>
+        <th class="col-head" style="width:14px;padding:0;border-right:0.5px solid rgba(255,255,255,0.1)"></th>
+        <th class="col-head">Dataset Types <span class="sub">Key data used</span></th>
+      </tr>
+    </thead>
+    <tbody>
+
+      <!-- ═══════════════════════════════ PATIENT.COM CONSUMER PORTAL ═══════════════════════ -->
+
+      <!-- Row 1: Cost Guidance -->
+      <tr>
+        <td class="cat-cell cat-blue" rowspan="6">
+          <div class="cat-badge">
+            <span class="cat-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+            </span>
+            1. Patient.com Consumer Portal
+          </div>
+          <div class="cat-outcome">
+            <strong>Outcome</strong>
+            A unified data platform serves as the intelligent backend that transforms raw data and inputs to provide personalized user experience and guidance.
+          </div>
+        </td>
+        <td class="arrow-col" rowspan="6"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">1</span> Cost Guidance</div>
+          <div class="cap-desc">Move patients from confusion to clarity on true out-of-pocket financial responsibility.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Bulk data ingestion with curated outputs</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Dataset orchestration with multi-source adjudication</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>API based direct data access</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Semantic to Medical procedure / CCSID / anchor</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Medical procedure / CCSID / anchor to CPTs</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>CPTs to Cost mapping</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 2: Preventive Care -->
+      <tr>
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">2</span> Preventive Care</div>
+          <div class="cap-desc">Move patients from reactive to proactive by surfacing timely care opportunities.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling at application side</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling &amp; ingestion in data platform</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Web sources (Govt &amp; Regulatory, medical journals)</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>271 &amp; Plan PDF documents</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 3: Affordability Pathways -->
+      <tr>
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">3</span> Junction Box: Affordability Pathways</div>
+          <div class="cap-desc">Redirect users toward sponsor listings to lessen out-of-pocket burden.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling routines managed in data platform</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling routines handled at application side</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Web sources (Provider websites, medical journals)</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Assistance Program Datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Community Healthcare Datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>271 &amp; Plan PDF</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 4: Provider Selection -->
+      <tr>
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">4</span> Junction Box: Provider Selection (Geographic Locations)</div>
+          <div class="cap-desc">Instantly validates network status against user's precise insurance tier.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling routines managed in data platform</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Bulk data ingestion + adjudication with AI crawling</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Web sources (Provider websites, medical journals)</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>271 &amp; Plan PDF</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 5: Clinical Sponsored Opportunities -->
+      <tr>
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">5</span> Junction Box: Clinical Sponsored Opportunities</div>
+          <div class="cap-desc">Surfaces clinical opportunities funded by providers or health systems.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling in data platform</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Dataset orchestration with multi-source adjudication</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>API based direct data access</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Web sources (Provider websites, medical journals)</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>User behavioral data ingested in data platform</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 6: Payer Advisor -->
+      <tr class="cat-sep">
+        <td class="cap-cell cap-blue">
+          <div class="cap-name"><span class="cap-num">6</span> Junction Box: Payer Advisor</div>
+          <div class="cap-desc">Converts dense actuarial plan variables into personalized annual financial run-rates.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-blue">
+          <div class="enab-item"><span class="enab-dot"></span><span>Agentic AI crawling &amp; document ingestion in data platform</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>API based direct data access</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-dash">—</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-blue">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Web sources (Payer websites)</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Plan Master Datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Benefit Structure Datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>271 &amp; Plan PDF</span></div>
+        </td>
+      </tr>
+
+      <!-- ═══════════════════════════════ PRODUCT TEAM ═══════════════════════ -->
+
+      <!-- Row 7: Consumer Journey Intelligence -->
+      <tr>
+        <td class="cat-cell cat-green" rowspan="5">
+          <div class="cat-badge">
+            <span class="cat-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="3"/><circle cx="16" cy="8" r="3"/><path d="M2 20c0-3.3 2.7-6 6-6h8c3.3 0 6 2.7 6 6"/></svg>
+            </span>
+            2. Product Team
+          </div>
+          <div class="cat-outcome">
+            <strong>Outcome</strong>
+            Unified behavioral, operational, and healthcare intelligence to improve user journeys, launch new capabilities, and optimize engagement, conversion, and retention.
+          </div>
+        </td>
+        <td class="arrow-col" rowspan="5"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="cap-cell cap-green">
+          <div class="cap-name"><span class="cap-num">1</span> Consumer Journey Intelligence</div>
+          <div class="cap-desc">Understand user navigation behavior, abandonment points, and decision friction.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-green">
+          <div class="enab-item"><span class="enab-dot"></span><span>Behavioral event ingestion into data platform</span></div>
+          <div class="enab-sub">Curated behavioral datasets &amp; session intelligence outputs exposed to analytics</div>
+          <div class="enab-item" style="margin-top:5px"><span class="enab-dot"></span><span>Real-time event stream orchestration</span></div>
+          <div class="enab-sub">Real-time interaction telemetry pipelines established</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Where do users abandon the journey flow?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which journeys convert users toward affordability pathways?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which feature category generates highest repeat engagement?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-green">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Application interaction events</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Session telemetry</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>User engagement metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Search &amp; clickstream data</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>AI interaction logs</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 8: Feature Performance Intelligence -->
+      <tr>
+        <td class="cap-cell cap-green">
+          <div class="cap-name"><span class="cap-num">2</span> Feature Performance Intelligence</div>
+          <div class="cap-desc">Measure feature adoption, retention impact, and engagement quality.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-green">
+          <div class="enab-item"><span class="enab-dot"></span><span>Centralized product analytics layer</span></div>
+          <div class="enab-sub">Feature telemetry standardized through curated analytical models</div>
+          <div class="enab-item" style="margin-top:5px"><span class="enab-dot"></span><span>Experimentation &amp; A/B testing orchestration</span></div>
+          <div class="enab-sub">Product experimentation datasets for comparative analysis</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which feature drives the highest retention uplift?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which cost guidance modules have low completion rates?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which recommendation flows increase conversion to providers?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-green">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Feature usage telemetry</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Funnel analytics datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Retention cohorts</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>User segmentation datasets</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 9: Voice of Customer -->
+      <tr>
+        <td class="cap-cell cap-green">
+          <div class="cap-name"><span class="cap-num">3</span> Voice of Customer &amp; Sentiment Intelligence</div>
+          <div class="cap-desc">Harvest structured &amp; unstructured feedback to identify trust gaps and usability issues.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-green">
+          <div class="enab-item"><span class="enab-dot"></span><span>Feedback &amp; sentiment data ingestion</span></div>
+          <div class="enab-sub">Feedback categorization pipelines established in data platform</div>
+          <div class="enab-item" style="margin-top:5px"><span class="enab-dot"></span><span>NLP &amp; sentiment modeling pipelines</span></div>
+          <div class="enab-sub">Market demand intelligence; healthcare category demand datasets</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>What are the most common frustrations in medical billing guidance?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which healthcare journeys create confusion?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which medical procedures are most likely to cause user frustration?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-green">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Support tickets &amp; chat logs</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>User reviews &amp; ratings</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>User feedback on chat responses</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Chatbot interaction logs</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Survey responses</span></div>
+          <div class="ds-item"><span class="ds-letter">F</span><span>Session replay metadata</span></div>
+          <div class="ds-item"><span class="ds-letter">G</span><span>Medical taxonomy datasets</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 10: Recommendation & Personalization -->
+      <tr>
+        <td class="cap-cell cap-green">
+          <div class="cap-name"><span class="cap-num">4</span> Recommendation &amp; Personalization Intelligence</div>
+          <div class="cap-desc">Personalize user experiences through preference modeling and ML feature pipelines.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-green">
+          <div class="enab-item"><span class="enab-dot"></span><span>User-context &amp; preference pipelines</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>ML model training &amp; feature orchestration</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which users benefit from personalization?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which recommendations lead to action?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which segments need better experiences?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-green">
+          <div class="ds-item"><span class="ds-letter">A</span><span>User profile &amp; preferences</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Behavioral history datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Recommendation interaction datasets</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 11: AI & Automation Intelligence -->
+      <tr class="cat-sep">
+        <td class="cap-cell cap-green">
+          <div class="cap-name"><span class="cap-num">5</span> AI &amp; Automation Intelligence</div>
+          <div class="cap-desc">Monitor AI feature performance and drive automation value across the platform.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-green">
+          <div class="enab-item"><span class="enab-dot"></span><span>LLM / Agent interaction logging</span></div>
+          <div class="enab-item"><span class="enab-dot"></span><span>Model performance &amp; evaluation pipelines</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which AI features are most used?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Where do AI responses fail?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which automations drive the most value?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-green">
+          <div class="ds-item"><span class="ds-letter">A</span><span>LLM prompts &amp; responses</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Model performance metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Automation execution logs</span></div>
+        </td>
+      </tr>
+
+      <!-- ═══════════════════════════════ BUSINESS TEAM ═══════════════════════ -->
+
+      <!-- Row 12: Ecosystem Performance Intelligence -->
+      <tr>
+        <td class="cat-cell cat-amber" rowspan="4">
+          <div class="cat-badge">
+            <span class="cat-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="9" width="4" height="12" rx="1"/><rect x="17" y="5" width="4" height="16" rx="1"/></svg>
+            </span>
+            3. Business Team (MIS / Growth / Strategy)
+          </div>
+          <div class="cat-outcome">
+            <strong>Outcome</strong>
+            Actionable business intelligence for growth, market insights, operational efficiency, and strategic decision-making across the organization.
+          </div>
+        </td>
+        <td class="arrow-col" rowspan="4"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="cap-cell cap-amber">
+          <div class="cap-name"><span class="cap-num">1</span> Ecosystem Performance Intelligence</div>
+          <div class="cap-desc">Evaluate platform-wide ecosystem health and strategic effectiveness of marketplace interactions.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-amber">
+          <div class="enab-item"><span class="enab-dot"></span><span>Unified partner intelligence layer</span></div>
+          <div class="enab-sub">Provider &amp; payer operational datasets in adjudication with Agentic AI driven data crawling, centralized in the data platform</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which provider partnerships generate highest engagement?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which payer pathways convert most effectively?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which regions show strongest growth across any business avenue?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which financing programs generate the highest referral revenue?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-amber">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Provider engagement datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Payer referral datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Marketplace transaction datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Partnership performance metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Regional growth metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">F</span><span>Clinical sponsorship datasets</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 13: Unit Economics & Cost Intelligence -->
+      <tr>
+        <td class="cap-cell cap-amber">
+          <div class="cap-name"><span class="cap-num">2</span> Unit Economics &amp; Cost Intelligence</div>
+          <div class="cap-desc">Evaluate operational efficiency, CAC, LTV, servicing costs, and infrastructure utilization.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-amber">
+          <div class="enab-item"><span class="enab-dot"></span><span>Revenue attribution pipelines</span></div>
+          <div class="enab-sub">Revenue event orchestration and monetization datasets established</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>What is the cost per active consumer journey?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which workflows create the highest operational overhead?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which healthcare categories are financially sustainable?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-amber">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Customer acquisition cost datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Lifecycle value datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Workflow processing cost metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>AI compute utilization metrics</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 14: Operational MIS & Executive Intelligence -->
+      <tr>
+        <td class="cap-cell cap-amber">
+          <div class="cap-name"><span class="cap-num">3</span> Operational MIS &amp; Executive Intelligence</div>
+          <div class="cap-desc">Provide leadership near real-time operational visibility and enable cross-functional KPI monitoring.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-amber">
+          <div class="enab-item"><span class="enab-dot"></span><span>Centralized executive reporting layer</span></div>
+          <div class="enab-sub">Curated business KPIs and dashboards exposed through the data platform</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>What are the current platform growth trends?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which product areas underperform operationally?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which business units require intervention?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-amber">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Executive KPI datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Operational metrics</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Growth analytics</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Customer acquisition datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Platform performance metrics</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 15: Market Expansion Intelligence -->
+      <tr class="cat-sep">
+        <td class="cap-cell cap-amber">
+          <div class="cap-name"><span class="cap-num">4</span> Market Expansion Intelligence</div>
+          <div class="cap-desc">Identify underserved healthcare regions, opportunity clusters, and geographic expansion decisions.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-amber">
+          <div class="enab-item"><span class="enab-dot"></span><span>External healthcare ecosystem aggregation</span></div>
+          <div class="enab-sub">Demography-wise healthcare intelligence curated centrally in data platform</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which regions should be prioritized for launch?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which healthcare services have affordability gaps?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which provider networks require onboarding?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-amber">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Geographic provider datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Population healthcare demand datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Insurance availability datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Affordability gap indicators</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Regional healthcare access metrics</span></div>
+        </td>
+      </tr>
+
+      <!-- ═══════════════════════════════ FINANCE ═══════════════════════ -->
+
+      <!-- Row 16: RevOps Intelligence -->
+      <tr>
+        <td class="cat-cell cat-purple" rowspan="3">
+          <div class="cat-badge">
+            <span class="cat-icon">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
+            </span>
+            4. Finance
+          </div>
+          <div class="cat-outcome">
+            <strong>Outcome</strong>
+            Financial clarity, performance tracking, and prediction to drive profitability, control costs, and support strategic investments.
+          </div>
+        </td>
+        <td class="arrow-col" rowspan="3"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="cap-cell cap-purple">
+          <div class="cap-name"><span class="cap-num">1</span> Revenue Operations (RevOps) Intelligence</div>
+          <div class="cap-desc">Track and optimize revenue generation across multiple monetization streams.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-purple">
+          <div class="enab-item"><span class="enab-dot"></span><span>Centralized revenue intelligence pipelines</span></div>
+          <div class="enab-sub">Revenue event and attribution datasets managed within the data platform</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>Which revenue streams generate the highest margin?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which partnerships contribute strongest recurring revenue?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>What is the monthly referral conversion value?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-purple">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Revenue transaction datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Referral payout datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Partner commission datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Subscription billing datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Revenue attribution datasets</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 17: Financial Forecasting -->
+      <tr>
+        <td class="cap-cell cap-purple">
+          <div class="cap-name"><span class="cap-num">2</span> Financial Forecasting &amp; Scenario Modeling</div>
+          <div class="cap-desc">Forecast revenue, operational costs, and expansion outcomes for strategic planning.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-purple">
+          <div class="enab-item"><span class="enab-dot"></span><span>Predictive financial modeling pipelines</span></div>
+          <div class="enab-sub">Forecasting datasets generated within the platform</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>What is projected revenue under regional expansion?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Which product initiatives improve long-term profitability?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>How do payer partnerships impact projected revenue?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-purple">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Historical revenue datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Growth trend datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Operational cost datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Expansion forecasting models</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Market demand indicators</span></div>
+        </td>
+      </tr>
+
+      <!-- Row 18: Compliance, Audit & Governance -->
+      <tr>
+        <td class="cap-cell cap-purple">
+          <div class="cap-name"><span class="cap-num">3</span> Compliance, Audit &amp; Governance Ready</div>
+          <div class="cap-desc">Improve financial transparency, reporting readiness, and support auditability &amp; governance standards.</div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="enab-cell enab-purple">
+          <div class="enab-item"><span class="enab-dot"></span><span>Financial governance pipelines</span></div>
+          <div class="enab-sub">Governance metrics &amp; financial audit datasets exposed internally</div>
+          <div class="enab-item" style="margin-top:5px"><span class="enab-dot"></span><span>Audit-ready financial lineage and reconciliation datasets established</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="q-cell">
+          <div class="q-item"><span class="q-bullet">›</span><span>What financial risks do we face?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>Are we compliant with regulations?</span></div>
+          <div class="q-item"><span class="q-bullet">›</span><span>What audit or control gaps exist?</span></div>
+        </td>
+        <td class="arrow-col"><div class="arrow-col-inner"><svg class="arr-svg" viewBox="0 0 10 10"><path d="M2 5h6M6 3l2 2-2 2" fill="none" stroke="#2c2c2a" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div></td>
+        <td class="ds-cell ds-purple">
+          <div class="ds-item"><span class="ds-letter">A</span><span>Financial audit logs</span></div>
+          <div class="ds-item"><span class="ds-letter">B</span><span>Revenue lineage datasets</span></div>
+          <div class="ds-item"><span class="ds-letter">C</span><span>Partner payout records</span></div>
+          <div class="ds-item"><span class="ds-letter">D</span><span>Compliance &amp; policy regulatory data</span></div>
+          <div class="ds-item"><span class="ds-letter">E</span><span>Risk assessment data</span></div>
+        </td>
+      </tr>
+
+    </tbody>
+  </table>
+
+  <!-- Footer -->
+  <div class="page-footer">
+    <div style="font-size:10px; color:var(--text-muted)">
+      Legend: &nbsp;
+      <span style="border:0.5px solid var(--border);padding:2px 6px;border-radius:3px;margin-right:4px;">Class</span>
+      <span style="border:0.5px solid var(--border);padding:2px 6px;border-radius:3px;margin-right:4px;">Capability</span>
+      <span style="border:0.5px solid var(--border);padding:2px 6px;border-radius:3px;margin-right:4px;">Enablement Approach</span>
+      <span style="border:0.5px solid var(--border);padding:2px 6px;border-radius:3px;margin-right:4px;">Questions</span>
+      <span style="border:0.5px solid var(--border);padding:2px 6px;border-radius:3px;">Datasets</span>
+    </div>
+    <div>
+      <div style="font-size:10px;color:var(--text-muted);text-align:right;margin-bottom:6px;">Data requirement types by application:</div>
+      <div class="req-types">
+        <span class="req-tag">➔ Immediate Answers (pre-processed &amp; curated datasets)</span>
+        <span class="req-tag">➔ Request Based Intelligence (batch / queue / AI-driven)</span>
+        <span class="req-tag">➔ Real-Time Operational Intelligence (streaming &amp; event-driven)</span>
+        <span class="req-tag">➔ AI-Driven Inference Systems (recommendation / prediction / optimization)</span>
+      </div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>
