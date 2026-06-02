@@ -16,6 +16,7 @@
   .pulse-glow { animation: pulse 1.8s ease-in-out infinite; }
   @keyframes pulse { 0%,100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.02); opacity: 1; } }
   .tooltip-card { position: fixed; z-index: 50; max-width: 320px; background: rgba(15,23,42,.96); border: 1px solid rgba(148,163,184,.2); backdrop-filter: blur(12px); color: #f8fafc; padding: 12px 14px; border-radius: 16px; box-shadow: 0 24px 80px rgba(15,23,42,.45); pointer-events: none; font-size: .92rem; line-height: 1.5; }
+  .junction-box { border-color: rgba(217, 119, 6, 0.3) !important; background-color: rgba(180, 83, 9, 0.1) !important; }
 </style>
 </head>
 <body>
@@ -51,31 +52,27 @@
         capabilities: [
           {
             name: 'Cost Guidance',
-            focus: 'Move patients from confusion to clarity on their out-of-pocket financial responsibility, providing estimated pricing guidance and affordability context.',
-            steps: [
-              'Bulk data ingestion from payer, provider and public price sources.',
-              'Dataset orchestration from multiple sources and enrichment pipelines.',
-              'API-based direct data access with completeness checks and enrichment for missing fields.'
+            focus: 'Move patients from confusion to clarity on their out-of-pocket financial responsibility. We help patients understand expected healthcare costs by providing estimated pricing guidance.',
+            implementationApproaches: [
+              { label: 'A', title: 'Bulk Data Ingestion', steps: ['Bulk data ingestion from payer, provider and public price sources.'] },
+              { label: 'B', title: 'Dataset Orchestration', steps: ['Dataset orchestration from multiple sources and further processing is required.'] },
+              { label: 'C', title: 'API-based Direct Data Access', steps: ['API-based direct data access (e.g., from IMO Health). Received data is incomplete and still requires enrichment through additional data sources.'] }
             ],
             datasets: {
               internal: [],
-              external: [
-                'Translating user query into medical procedure records',
-                'Matching procedures to CPT/HCPCS codes',
-                'Mapping negotiated payer-provider cost schedules'
-              ]
+              external: ['Translating user query to medical procedure', 'Matching medical procedure to CPT/HCPCS codes', 'Mapping CPT/HCPCS codes to respective payer-provider negotiated cost']
             },
             references: [
-              { label: 'Core Procedure Resolution Data Sources', url: '#' },
-              { label: 'Pricing Market Sources (Mobile, Alabama)', url: '#' }
+              { label: 'Core Procedure Resolution Data Sources', url: 'https://drive.google.com/drive/folders/1yCO4h8JvMUdiHLZ4nOreicrcOgug4OzK?usp=drive_link' },
+              { label: 'Pricing Market Sources (Mobile, Alabama)', url: 'https://drive.google.com/drive/folders/1AMZgbbWwwzBGpgsphTojyqaVOrfYwh-j?usp=drive_link' }
             ]
           },
           {
             name: 'Interpret Eligibility Benefits',
-            focus: 'Clarify insurance coverage and uncover hidden plan benefits using eligibility and plan document intelligence.',
-            steps: [
-              'Ingest 271 and Plan PDF documents concurrently.',
-              'Enrich assets with real-time EDI parameters for unified benefits understanding.'
+            focus: 'Enable users to better understand their insurance coverage, uncover lesser-known plan benefits, and answer inference-based questions using eligibility and plan document intelligence.',
+            implementationApproaches: [
+              { label: 'A', title: 'Ingest Documents', steps: ['Ingest 271 and Plan PDF documents concurrently.'] },
+              { label: 'B', title: 'Enrich with EDI', steps: ['Enrich assets with real-time EDI parameters for unified benefits understanding.'] }
             ],
             datasets: {
               internal: ['271 & Plan PDF documents', 'EDI Data'],
@@ -86,166 +83,208 @@
           {
             name: 'Preventive Care',
             focus: 'Move patients from reactive to proactive by surfacing timely care opportunities.',
-            steps: [
-              'Crawl and ingest static data sources into the core platform.',
-              'Enrich datasets with Plan PDF intelligence.',
-              'Integrate personal health records for contextual analysis.'
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl & Ingest Data Sources', steps: ['Data sources (mostly static) are crawled & ingested into the data platform.'] },
+              { label: 'B', title: 'Enrich with Plan PDF', steps: ['Data enriched together using Plan PDF.'] },
+              { label: 'C', title: 'Integrate Personal Health Records', steps: ['User personal health records integrated for contextual analysis.'] }
             ],
             datasets: {
               internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
-              external: ['Web sources (government, regulatory, medical journals)']
+              external: ['Web sources (Government & Regulatory Sources, medical journals)']
             },
-            references: [{ label: 'Preventive care - Data v1.xlsx', url: '#' }]
+            references: [{ label: 'Preventive care - Data v1.xlsx', url: 'https://docs.google.com/spreadsheets/d/1OD6tDk5tmbRwlaf6-sVWl5Hjw3s7gNin/edit?usp=drive_link&ouid=109222184301780375049&rtpof=true&sd=true' }]
           },
           {
             name: 'Junction Box: Affordability Pathways',
-            focus: 'Surface sponsor programs and financial assistance options to reduce out-of-pocket burden when coverage exists but costs remain high.',
-            steps: [
-              'Periodically crawl external assistance sources and ingest into the platform.',
-              'Enrich captured elements with 271, Plan PDF, and EDI structures.'
+            focus: 'Users often reach a point where they understand their coverage and see the cost, but cannot move forward. This feature redirects users towards available program listings to lessen the out-of-pocket burden for patients.',
+            junctionBox: true,
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl & Ingest Data Sources', steps: ['Data sources are periodically crawled & ingested into the data platform.'] },
+              { label: 'B', title: 'Enrich with 271, Plan PDF & EDI', steps: ['Data enriched together using 271, Plan PDF documents and EDI Data.'] }
             ],
             datasets: {
               internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
               external: ['Provider websites', 'Assistance program datasets', 'Community healthcare datasets']
             },
-            references: [{ label: 'Affordability Pathways data references', url: '#' }]
-          },
-          {
-            name: 'Junction Box: Provider Selection',
-            focus: 'Validate network status against a user’s precise insurance tier and recommend lower cost, in-network options.',
-            steps: [
-              'Crawl provider network sources and ingest provider profiles.',
-              'Enrich with Plan PDF and pricing data.',
-              'Embed network validation checks into the consumer flow.'
-            ],
-            datasets: {
-              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
-              external: ['Provider websites', 'Medical journal data']
-            },
-            references: [{ label: 'Provider selection references', url: '#' }]
-          },
-          {
-            name: 'Junction Box: Clinical Sponsored Opportunities',
-            focus: 'Surface discounted imaging, after-hours slots, and provider-funded clinical opportunities that are often missed.',
-            steps: [
-              'Crawl sponsor program feeds and ingest profiles.',
-              'Ingest third-party aggregator APIs and enrich with platform-level crawled data.'
-            ],
-            datasets: {
-              internal: ['User behavioral data'],
-              external: ['Provider websites', 'Medical journals']
-            },
-            references: [{ label: 'Clinical Sponsored Opportunities data references', url: '#' }]
+            references: [{ label: 'Junction Box: Affordability Pathways data references', url: 'https://docs.google.com/document/d/1qvaVh71eNIC4kBbfObwp79PvE5fqWpWh9X-c_95hi1c/edit?usp=sharing' }]
           },
           {
             name: 'Junction Box: Payer Advisor',
-            focus: 'Convert plan variables into personalized guidance for plan comparison, break-even points, and claim-level cost expectations.',
-            steps: [
-              'Crawl target payer and provider sources.',
-              'Orchestrate multi-source datasets into a coherent decision layer.',
-              'Enrich with Plan PDF architectures.'
+            focus: 'Convert plan variables into personalized guidance helping users choose the most appropriate plan. Patient.com highlights break-even points and provides guidance based on claims data.',
+            junctionBox: true,
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl & Ingest Data Sources', steps: ['Data sources are periodically crawled & ingested into the data platform.'] },
+              { label: 'B', title: 'Dataset Orchestration', steps: ['Dataset orchestration from multiple sources and further processing is required.'] },
+              { label: 'C', title: 'Enrich with Plan PDF', steps: ['Data enriched together using Plan PDF.'] }
             ],
             datasets: {
               internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
               external: ['Payer websites', 'Plan master datasets', 'Benefit structure datasets']
             },
-            references: [{ label: 'Payer Advisor data references', url: '#' }]
+            references: [{ label: 'Junction Box: Payer Advisor data references', url: 'https://docs.google.com/document/d/1gpLpbNCxlmy2Cu2Cbe-fNk86rIw8MmgYP0tfj-J8Bq4/edit?usp=sharing' }]
+          },
+          {
+            name: 'Junction Box: Provider Selection',
+            focus: 'Patients waste hours calling listed in-network providers, only to find they are retired or not accepting new patients. This feature instantly validates network status and eliminates out-of-network surprises while lowering overall cost.',
+            junctionBox: true,
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl & Ingest Provider Data', steps: ['Data sources are periodically crawled & ingested into the data platform.'] },
+              { label: 'B', title: 'Enrich with Plan PDF', steps: ['Data enriched together using Plan PDF.'] }
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
+              external: ['Provider websites', 'Medical journals']
+            },
+            references: [{ label: 'Junction Box: Provider selection data references', url: 'https://docs.google.com/document/d/1P5GUzPGJR0mBkoADKslnfL3ZFwAKrnzeQmzK9hH0P-c/edit?usp=sharing' }]
+          },
+          {
+            name: 'Junction Box: Clinical Sponsored Opportunities',
+            focus: 'Patients often miss discounts run by providers due to lack of discoverability. Patient.com surfaces clinical opportunities funded by providers or systems.',
+            junctionBox: true,
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl & Ingest Data Sources', steps: ['Data sources are periodically crawled & ingested into the data platform.'] },
+              { label: 'B', title: 'API & Enrichment', steps: ['API-based data access from a 3rd party aggregator, and enriched together using crawled data.'] }
+            ],
+            datasets: {
+              internal: ['User behavioral data'],
+              external: ['Provider websites', 'Medical journals']
+            },
+            references: [{ label: 'Junction Box: Clinical Sponsored opportunities data references', url: 'https://docs.google.com/document/d/12XOp6YgNgHTx0q2hC5xOCdH4CIHzliL08RcDEr8BlMA/edit?usp=sharing' }]
           }
         ]
       },
       {
         id: 'product-team',
         title: 'Product Team Ecosystem',
-        outcome: 'Unified behavioral, operational, and healthcare intelligence to improve journeys, launch capabilities, and optimize engagement.',
+        outcome: 'The product team requires unified behavioral, operational, and healthcare intelligence abstractions to continuously improve user journeys, launch new capabilities, and optimize engagement, conversion, and retention across the platform.',
         intro: 'Data-backed product intelligence for adoption, retention, and experience optimization.',
         capabilities: [
           {
             name: 'Consumer Journey Intelligence',
-            focus: 'Understand navigation behavior, abandonment points, and friction to optimize search and affordability workflows.',
-            steps: [
-              'Ingest behavioral events into the data platform.',
-              'Enable real-time event stream orchestration layers.'
+            focus: 'Understand user navigation behavior, abandonment points, and decision friction. Optimize medical search journeys and affordability guidance flows. Identify which experiences drive higher engagement and trust.',
+            implementationApproaches: [
+              { label: 'A', title: 'Behavioral Event Ingestion', steps: ['Behavioral event ingestion into data platform.'] },
+              { label: 'B', title: 'Real-time Event Stream Orchestration', steps: ['Real-time event stream orchestration and processing.'] }
             ],
             datasets: {
-              internal: ['Application interaction events', 'Session telemetry', 'User engagement metrics', 'Search clickstream data', 'AI interaction logs', 'Pendo tracking'],
+              internal: ['Application interaction events', 'Session telemetry', 'User engagement metrics', 'Search and clickstream data', 'AI interaction logs', 'Pendo'],
               external: []
             },
-            references: []
+            references: [],
+            potentialQuestions: [
+              'Where do users abandon the journey flow (e.g., during cost guidance journey)?',
+              'Which journeys convert the user toward affordability pathways?',
+              'Which feature category generates the highest repeat engagement for the user?'
+            ]
           },
           {
             name: 'Feature Performance Intelligence',
-            focus: 'Measure adoption, retention impact, and engagement quality to prioritize roadmap investment.',
-            steps: ['Deploy a centralized product analytics layer for feature-level metrics.'],
+            focus: 'Measure feature adoption, retention impact, and engagement quality. Evaluate performance of affordability, payer advisory, and preventive care features. Prioritize roadmap investments using data-backed product insights.',
+            implementationApproaches: [
+              { label: 'A', title: 'Centralized Analytics Layer', steps: ['Deploy a centralized product analytics layer for feature-level metrics and funnel analysis.'] }
+            ],
             datasets: {
-              internal: ['Feature usage telemetry', 'Funnel analytics', 'Retention cohorts', 'User segmentation datasets', 'Pendo records'],
+              internal: ['Feature usage telemetry', 'Funnel analytics datasets', 'Retention cohorts', 'User segmentation datasets', 'Pendo'],
               external: []
             },
-            references: []
+            references: [],
+            potentialQuestions: [
+              'Which feature drives the highest retention uplift?',
+              'Which cost guidance modules have low completion rates?',
+              'Which recommendation flows increase conversion to providers?'
+            ]
           },
           {
             name: 'Voice of Customer & Sentiment Intelligence',
-            focus: 'Harvest structured and unstructured feedback to identify trust gaps and emerging consumer concerns.',
-            steps: [
-              'Deploy VOC ingestion and classification.',
-              'Build market demand pipelines for healthcare demand datasets.'
+            focus: 'Harvest structured and unstructured feedback from users. Identify trust gaps, usability issues, and emerging consumer concerns. Feed roadmap prioritization using user sentiment intelligence.',
+            implementationApproaches: [
+              { label: 'A', title: 'VOC Ingestion & Classification', steps: ['VOC/Feedback ingestion and classification.'] },
+              { label: 'B', title: 'Market Demand Intelligence Pipelines', steps: ['Market demand intelligence pipelines - Curated healthcare category demand datasets.'] }
             ],
             datasets: {
-              internal: ['Support tickets', 'User reviews', 'Chat response feedback', 'Chatbot logs', 'Survey responses', 'Session replay metadata', 'Medical taxonomy datasets'],
+              internal: ['Support tickets', 'User reviews and ratings', 'Chat response feedback', 'Chatbot interaction logs', 'Survey responses', 'Session replay metadata', 'Medical taxonomy datasets'],
               external: ['Geographic demand indicators']
             },
-            references: [{ label: 'Voice of Customer & Sentiment references', url: '#' }]
+            references: [{ label: 'Voice of Customer & Sentiment Intelligence data references', url: 'https://docs.google.com/document/d/1E0k4THFFEWHk6VOdCkO4Y08ydPA3Iu2C9lx_yeTe2SA/edit?usp=sharing' }],
+            potentialQuestions: [
+              'What are the most common frustrations in medical billing guidance?',
+              'Which healthcare journeys create confusion?',
+              'Which medical procedures are most likely to cause frustration to users?'
+            ]
           }
         ]
       },
       {
         id: 'business-team',
         title: 'Business Team (MIS / Strategy)',
-        outcome: 'Integrated ecosystem intelligence and monetization visibility for growth, partnerships, and sustainable revenue.',
+        outcome: 'The business team requires integrated ecosystem intelligence and monetization visibility to drive growth, partnerships, expansion strategy, and sustainable revenue generation.',
         intro: 'Business intelligence that aligns commercial strategy and operational performance.',
         capabilities: [
           {
             name: 'Ecosystem Performance Intelligence',
-            focus: 'Evaluate platform health, marketplace interactions, and partner performance across payers and providers.',
-            steps: [
-              'Deploy a unified partner intelligence layer backed by operational and external data sources.'],
+            focus: 'Evaluate platform-wide ecosystem health. Understand provider, payer, financing, and partner network performance. Measure strategic effectiveness of marketplace interactions.',
+            implementationApproaches: [
+              { label: 'A', title: 'Unified Partner Intelligence Layer', steps: ['Implement a unified partner intelligence layer. Provider and payer operational datasets enriched together using periodically crawled external data sources.'] }
+            ],
             datasets: {
-              internal: ['Provider engagement data', 'Payer referral datasets', 'Marketplace transaction records', 'Partnership performance metrics', 'Regional growth metrics', 'Clinical sponsorship datasets'],
-              external: ['Trusted healthcare reports']
+              internal: ['Provider engagement datasets', 'Payer referral datasets', 'Marketplace transaction datasets', 'Partnership performance metrics', 'Regional growth metrics', 'Clinical sponsorship datasets'],
+              external: ['Trusted Healthcare sources/reports']
             },
-            references: [{ label: 'Ecosystem Performance references', url: '#' }]
+            references: [{ label: 'Ecosystem Performance Intelligence data references', url: 'https://docs.google.com/document/d/1aws0t1u7GafX-sE4RQcGlZ23czuw1bU6iDmSwG3vwEg/edit?usp=sharing' }],
+            potentialQuestions: [
+              'Which provider partnerships generate highest engagement?',
+              'Which payer pathways convert most effectively?',
+              'Which regions demonstrate the strongest growth of any business avenue?',
+              'Which sponsorship opportunities improve ecosystem value?',
+              'Which financing programs generate the highest referral revenue?'
+            ]
           },
           {
             name: 'Operational MIS & Executive Intelligence',
-            focus: 'Provide near real-time executive visibility for KPI monitoring, forecasting, and strategic action.',
-            steps: ['Build a centralized executive reporting layer with curated KPIs and dashboards.'],
+            focus: 'Provide leadership with near real-time operational visibility. Support strategic planning, forecasting, and performance tracking. Enable cross-functional KPI monitoring.',
+            implementationApproaches: [
+              { label: 'A', title: 'Centralized Executive Reporting Layer', steps: ['Implement a centralized executive reporting layer with curated business KPIs and dashboards.'] }
+            ],
             datasets: {
               internal: ['Executive KPI datasets', 'Operational metrics', 'Growth analytics', 'Customer acquisition datasets', 'Platform performance metrics'],
               external: []
             },
-            references: []
+            references: [],
+            potentialQuestions: [
+              'What are the current platform growth trends?',
+              'Which product areas underperform operationally?',
+              'Which business units require intervention?'
+            ]
           }
         ]
       },
       {
         id: 'revenue-finance',
         title: 'Revenue & Finance Team',
-        outcome: 'Financial intelligence, revenue visibility, and forecasting to support sustainable platform growth.',
+        outcome: 'The finance team requires financial intelligence, revenue visibility, operational cost, and predictive forecasting capabilities to support scalable and sustainable platform growth.',
         intro: 'Revenue, cost, and governance insight for scalable business outcomes.',
         capabilities: [
           {
             name: 'Financial Planning: Show Me the Money',
-            focus: 'Simulate revenue scenarios, break-even outcomes, and prioritize initiatives with growth-facing financial intelligence.',
-            steps: ['Implement centralized revenue intelligence pipelines and RevOps attribution datasets.'],
+            focus: 'Simulate revenue scenarios and break-even outcomes. Align revenue goals with budget planning. Identify key drivers impacting profitability and risk. Identify underserved healthcare regions and opportunity clusters.',
+            implementationApproaches: [
+              { label: 'A', title: 'Crawl Data Sources', steps: ['Crawl target payer and provider data sources.'] },
+              { label: 'B', title: 'Dataset Orchestration', steps: ['Dataset orchestration from multiple sources and further processing is required.'] },
+              { label: 'C', title: 'Revenue Intelligence Pipelines', steps: ['Implement centralized revenue intelligence pipelines with RevOps events and attribution datasets managed in the data platform.'] }
+            ],
             datasets: {
-              internal: ['Partner revenue data', 'Affordability revenue metrics', 'Acquisition channel metrics', 'Referral payout datasets', 'Product adoption metrics'],
+              internal: ['Provider partner revenue', 'Insurance/coverage partner revenue', 'Affordability & financing revenue', 'Direct acquisition revenue', 'Referral payout datasets', 'Product adoption metrics', 'Acquisition channels metrics'],
               external: ['HRSA Health Professional Shortage Areas']
             },
             references: []
           },
           {
             name: 'Compliance, Audit & Governance Ready',
-            focus: 'Expose audit-ready financial lineage and governance metrics to support external compliance standards.',
-            steps: ['Establish audit-ready reconciliation datasets and financial governance metrics.'],
+            focus: 'Improve financial transparency and reporting readiness. Support auditability and governance standards.',
+            implementationApproaches: [
+              { label: 'A', title: 'Governance Metrics & Audit Datasets', steps: ['Establish governance metrics and financial audit datasets exposed internally.'] },
+              { label: 'B', title: 'Audit-ready Reconciliation', steps: ['Establish audit-ready financial lineage and reconciliation datasets.'] }
+            ],
             datasets: {
               internal: ['Financial audit logs', 'Revenue lineage datasets', 'Partner payout records'],
               external: []
@@ -257,28 +296,44 @@
       {
         id: 'support-team',
         title: 'Support Team Hub',
-        outcome: 'Unified consumer context and operational intelligence for faster, more accurate support resolution.',
+        outcome: 'The customer support team requires unified consumer context, AI-assisted resolution capabilities, and operational intelligence to deliver faster, more accurate, and personalized support experiences to improve customer satisfaction while reducing handling effort.',
         intro: 'Support intelligence that reduces effort and improves outcomes with contextual consumer data.',
         capabilities: [
           {
             name: 'Consumer Support Intelligence',
-            focus: 'Give agents a unified view of consumer details, insurance, interactions, and next-best actions.',
-            steps: ['Consolidate profiles, insurance status, interaction history, and support activity into a support console view.'],
+            focus: 'Provide support agents with a unified view of the consumer details, interactions, and support history. Eliminate the need for consumers to repeatedly explain their situation. Assist support teams with contextual recommendations and next-best actions.',
+            implementationApproaches: [
+              { label: 'A', title: 'Consolidate Consumer Data', steps: ['Consolidate profile, insurance, product interaction, and support activity data to enable unified support view.'] }
+            ],
             datasets: {
-              internal: ['Consumer profile datasets', 'Eligibility datasets', 'Product interaction history', 'Chatbot logs', 'Support case history', 'Claims guidance history'],
+              internal: ['Consumer profile datasets', 'Eligibility & benefits datasets', 'Product interaction history', 'AI chatbot interaction logs', 'User activity timeline', 'Support case history', 'Claims guidance history', 'Affordability pathway recommendations'],
               external: []
             },
-            references: []
+            references: [],
+            potentialQuestions: [
+              'What eligibility or cost guidance interactions has the user recently performed?',
+              'Has the user experienced previous issues with coverage, claims, or affordability?',
+              'What recommendations were previously shown to the user?',
+              'Which support issues are recurring for this consumer?'
+            ]
           },
           {
             name: 'Support Operations Intelligence',
-            focus: 'Monitor CSAT, issue volumes, and escalation behavior to remove recurring healthcare navigation obstacles.',
-            steps: ['Implement analytics that continuously processes support metrics and operational logs for real-time insight.'],
+            focus: 'Monitor support effectiveness and consumer satisfaction. Identify recurring healthcare navigation challenges. Improve support processes through operational insights.',
+            implementationApproaches: [
+              { label: 'A', title: 'Operational Data Processing Layer', steps: ['Implement a layer which continuously processes customer interaction and operational data to enable insights and trends.'] }
+            ],
             datasets: {
-              internal: ['Ticket volumes', 'Resolution TAT', 'CSAT metrics', 'Support interaction logs', 'Agent escalation records', 'Journey abandonment datasets'],
+              internal: ['Ticket volumes', 'Resolution TAT', 'First-contact resolution metrics', 'Customer satisfaction scores (CSAT)', 'Support interaction logs', 'Chatbot-to-agent handoff data', 'Consumer journey abandonment data'],
               external: []
             },
-            references: []
+            references: [],
+            potentialQuestions: [
+              'What are the most common support issues?',
+              'Which user journeys generate the highest number of support tickets?',
+              'Which issue categories have the longest resolution times?',
+              'Which chatbot conversations frequently lead to agent escalation?'
+            ]
           }
         ]
       }
@@ -329,11 +384,11 @@
             <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
               <div class="rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-5 shadow-xl shadow-slate-950/20">
                 <div class="mb-3 flex items-center justify-between gap-3 text-sm text-slate-400"><span>Core hub</span><span class="rounded-full bg-cyan-500/10 px-3 py-1 text-cyan-200">Backend</span></div>
-                <p class="text-slate-300">A central core labeled “Unified Data Platform Backend” with radiating dynamic nodes and category cards in an overlapping circular grid.</p>
+                <p class="text-slate-300">A central core labeled "Unified Data Platform Backend" with radiating dynamic nodes and category cards in an overlapping circular grid.</p>
               </div>
               <div class="rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-5 shadow-xl shadow-slate-950/20">
                 <div class="mb-3 flex items-center justify-between gap-3 text-sm text-slate-400"><span>Interaction prompt</span><span class="rounded-full bg-amber-500/10 px-3 py-1 text-amber-200">✨ Click</span></div>
-                <p class="text-slate-300">Each card features a pulsating accent corner and micro-copy: “✨ Click to expand data pipeline models”.</p>
+                <p class="text-slate-300">Each card features a pulsating accent corner and micro-copy: "✨ Click to expand data pipeline models".</p>
               </div>
             </div>
           </div>
@@ -372,9 +427,9 @@
       <button data-cat="${cat.id}" class="rounded-full px-4 py-2 text-sm transition ${cat.id === category.id ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${cat.title}</button>
     `).join('');
     const capabilityCards = category.capabilities.map((cap, index) => `
-      <button data-cap="${index}" class="group rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-6 text-left transition duration-300 hover:-translate-y-1 hover:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40">
+      <button data-cap="${index}" class="group rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-6 text-left transition duration-300 hover:-translate-y-1 hover:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40 ${cap.junctionBox ? 'junction-box' : ''}">
         <div class="mb-3 flex items-center justify-between gap-3">
-          <span class="rounded-full bg-amber-200/10 px-3 py-1 text-amber-200">🔍 Inspect data steps & lookup models</span>
+          <span class="rounded-full bg-amber-200/10 text-amber-200 px-3 py-1 text-xs">🔍 ${cap.junctionBox ? 'Junction Box' : 'Data Pipeline'}</span>
           <span class="text-sm text-slate-400">Capability</span>
         </div>
         <h3 class="text-2xl font-semibold text-white">${cap.name}</h3>
@@ -439,6 +494,8 @@
   function renderCapabilityDetail() {
     const category = platformDataRegistry.categories.find(cat => cat.id === state.activeCategory);
     const capability = category.capabilities[state.activeCapability];
+    const shouldShowQuestions = ['product-team', 'business-team', 'support-team'].includes(category.id);
+    
     const categoriesMarkup = platformDataRegistry.categories.map(cat => `
       <button data-cat="${cat.id}" class="rounded-full px-4 py-2 text-sm transition ${cat.id === category.id ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${cat.title}</button>
     `).join('');
@@ -449,10 +506,16 @@
     const internalRows = capability.datasets.internal.length ? capability.datasets.internal.map(item => `<li class="rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${item}</li>`).join('') : '<li class="text-slate-500">No internal datasets defined.</li>';
     const externalRows = capability.datasets.external.length ? capability.datasets.external.map(item => `<li class="rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${item}</li>`).join('') : '<li class="text-slate-500">No external datasets defined.</li>';
 
-    const references = capability.references.length ? capability.references.map(ref => `<button data-url="${ref.url}" class="rounded-2xl border border-slate-700/70 bg-slate-900/90 px-4 py-3 text-left text-slate-200 transition hover:bg-cyan-500/10">${ref.label}</button>`).join('') : '<p class="text-slate-500">No references available.</p>';
-    const steps = capability.steps.map(step => `<li class="mb-3 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-4 text-slate-300"><span class="block text-sm font-semibold text-white">•</span><p class="mt-2 leading-7">${step}</p></li>`).join('');
+    const references = capability.references.length ? capability.references.map(ref => `<a href="${ref.url}" target="_blank" rel="noopener noreferrer" class="rounded-2xl border border-slate-700/70 bg-slate-900/90 px-4 py-3 text-left text-slate-200 transition hover:bg-cyan-500/10 hover:border-cyan-400/40 flex items-center justify-between"><span>${ref.label}</span><span class="text-xs ml-2">↗</span></a>`).join('') : '<p class="text-slate-500">No references available.</p>';
+    
+    const stepsContent = capability.implementationApproaches ? capability.implementationApproaches.map(approach => `
+      <div class="rounded-2xl border border-emerald-600/20 bg-emerald-950/20 px-4 py-4 mb-3">
+        <div class="text-sm font-semibold text-emerald-300 mb-2">Approach ${approach.label}: ${approach.title}</div>
+        <ul class="space-y-2">${approach.steps.map(step => `<li class="text-sm text-slate-300 flex items-start gap-2"><span class="text-emerald-400 mt-1">→</span><span>${step}</span></li>`).join('')}</ul>
+      </div>
+    `).join('') : capability.steps ? capability.steps.map(step => `<li class="mb-3 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-4 text-slate-300"><span class="block text-sm font-semibold text-white">•</span><p class="mt-2 leading-7">${step}</p></li>`).join('') : '';
 
-    const potentialQuestions = capability.potentialQuestions ? capability.potentialQuestions.map(question => `<li class="mb-3 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${question}</li>`).join('') : '<li class="text-slate-500">No potential questions defined.</li>';
+    const potentialQuestionsContent = shouldShowQuestions && capability.potentialQuestions ? capability.potentialQuestions.map(question => `<li class="mb-3 rounded-2xl border border-amber-600/20 bg-amber-950/20 px-4 py-3 text-slate-300"><span class="text-amber-400 font-semibold mr-2">Q:</span>${question}</li>`).join('') : '';
 
     const wrapper = document.createElement('div');
     wrapper.innerHTML = `
@@ -481,20 +544,20 @@
             <div class="mb-4 flex items-center justify-between gap-4">
               <div>
                 <div class="text-sm uppercase tracking-[0.24em] text-emerald-300/80">Workflow steps</div>
-                <p class="text-slate-400 text-sm">Bulk ingestion, orchestration, enrichment, and inference-ready output.</p>
+                <p class="text-slate-400 text-sm">${capability.implementationApproaches ? 'Multiple implementation approaches available' : 'Bulk ingestion, orchestration, enrichment, and inference-ready output.'}</p>
               </div>
             </div>
-            <ul>${steps}</ul>
+            ${stepsContent}
           </div>
-          <div>
+          ${shouldShowQuestions && capability.potentialQuestions ? `<div>
             <div class="mb-4 flex items-center justify-between gap-4">
               <div>
                 <div class="text-sm uppercase tracking-[0.24em] text-amber-300/80">Potential questions</div>
-                <p class="text-slate-400 text-sm">Key product and business questions to validate the capability.</p>
+                <p class="text-slate-400 text-sm">Key questions to validate this capability</p>
               </div>
             </div>
-            <ul>${potentialQuestions}</ul>
-          </div>
+            <ul>${potentialQuestionsContent}</ul>
+          </div>` : ''}
         </div>
         <div class="space-y-6">
           <div class="rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
@@ -530,14 +593,6 @@
     }));
     wrapper.querySelectorAll('[data-cap]').forEach(button => button.addEventListener('click', () => {
       state.activeCapability = Number(button.dataset.cap); render();
-    }));
-    wrapper.querySelectorAll('[data-url]').forEach(button => button.addEventListener('click', () => {
-      const url = button.dataset.url;
-      if (url === '#') {
-        alert('Reference links are placeholders for interactive asset modals.');
-      } else {
-        window.open(url, '_blank');
-      }
     }));
   }
 
