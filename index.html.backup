@@ -1,0 +1,570 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
+<title>Patient.com Data Architecture Explorer</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  body { min-height: 100vh; background: #020617; color: #f8fafc; }
+  .fade-enter { opacity: 0; transform: translateY(12px); }
+  .fade-enter-active { opacity: 1; transform: translateY(0); transition: opacity 260ms ease, transform 260ms ease; }
+  .tab-line { box-shadow: inset 0 -1px 0 rgba(148,163,184,.18); }
+  .pulse-glow { animation: pulse 1.8s ease-in-out infinite; }
+  @keyframes pulse { 0%,100% { transform: scale(1); opacity: .9; } 50% { transform: scale(1.02); opacity: 1; } }
+  .tooltip-card { position: fixed; z-index: 50; max-width: 320px; background: rgba(15,23,42,.96); border: 1px solid rgba(148,163,184,.2); backdrop-filter: blur(12px); color: #f8fafc; padding: 12px 14px; border-radius: 16px; box-shadow: 0 24px 80px rgba(15,23,42,.45); pointer-events: none; font-size: .92rem; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="app" class="min-h-screen px-4 py-6 sm:px-8"></div>
+<div id="tooltip" class="tooltip-card hidden"></div>
+<script>
+  (function () {
+    try { sessionStorage.clear(); localStorage.clear(); } catch (error) { console.warn('Storage clear failed', error); }
+    var url = new URL(window.location.href);
+    if (!url.searchParams.has('v')) { url.searchParams.set('v', Date.now()); window.history.replaceState({}, document.title, url.toString()); }
+  })();
+
+  const tooltipDictionary = {
+    EDI: 'Electronic Data Interchange: HIPAA X12 transaction messaging used for claims, eligibility, enrollment, and payment data exchange.',
+    '271': 'Eligibility Response transaction: returns patient coverage information and benefit details for an insurance plan.',
+    'ICD-10-CM': 'Diagnosis code set used for symptoms, conditions, and clinical encounters.',
+    CPT: 'Current Procedural Terminology: codes for outpatient procedures and services used for pricing and reimbursement.',
+    HCPCS: 'Healthcare Common Procedure Coding System Level II: codes for medical supplies, devices, and non-physician services.',
+    EHR: 'Electronic Health Record: clinical documentation system for patient history, medications, labs, and vitals.',
+    EMR: 'Electronic Medical Record: the digital version of a patient chart maintained by a single provider.',
+    RCM: 'Revenue Cycle Management: manages financial workflows from charge capture to payment posting.',
+    CDW: 'Clinical Data Warehouse: centralized repository for analytics and reporting across clinical datasets.',
+    HIE: 'Health Information Exchange: secure sharing of clinical data across provider organizations.',
+  };
+
+  const platformDataRegistry = {
+    categories: [
+      {
+        id: 'consumer-portal',
+        title: 'Patient.com Consumer Portal',
+        outcome: 'A unified data platform serves as the intelligent backend that transforms raw data and inputs to provide personalized user experience and guidance.',
+        intro: 'Personalized guidance applications changing clinical outcomes and affordability models.',
+        capabilities: [
+          {
+            name: 'Cost Guidance',
+            focus: 'Move patients from confusion to clarity on their out-of-pocket financial responsibility, providing estimated pricing guidance and affordability context.',
+            steps: [
+              'Bulk data ingestion from payer, provider and public price sources.',
+              'Dataset orchestration from multiple sources and enrichment pipelines.',
+              'API-based direct data access with completeness checks and enrichment for missing fields.'
+            ],
+            datasets: {
+              internal: [],
+              external: [
+                'Translating user query into medical procedure records',
+                'Matching procedures to CPT/HCPCS codes',
+                'Mapping negotiated payer-provider cost schedules'
+              ]
+            },
+            references: [
+              { label: 'Core Procedure Resolution Data Sources', url: '#' },
+              { label: 'Pricing Market Sources (Mobile, Alabama)', url: '#' }
+            ]
+          },
+          {
+            name: 'Interpret Eligibility Benefits',
+            focus: 'Clarify insurance coverage and uncover hidden plan benefits using eligibility and plan document intelligence.',
+            steps: [
+              'Ingest 271 and Plan PDF documents concurrently.',
+              'Enrich assets with real-time EDI parameters for unified benefits understanding.'
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data'],
+              external: []
+            },
+            references: []
+          },
+          {
+            name: 'Preventive Care',
+            focus: 'Move patients from reactive to proactive by surfacing timely care opportunities.',
+            steps: [
+              'Crawl and ingest static data sources into the core platform.',
+              'Enrich datasets with Plan PDF intelligence.',
+              'Integrate personal health records for contextual analysis.'
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
+              external: ['Web sources (government, regulatory, medical journals)']
+            },
+            references: [{ label: 'Preventive care - Data v1.xlsx', url: '#' }]
+          },
+          {
+            name: 'Junction Box: Affordability Pathways',
+            focus: 'Surface sponsor programs and financial assistance options to reduce out-of-pocket burden when coverage exists but costs remain high.',
+            steps: [
+              'Periodically crawl external assistance sources and ingest into the platform.',
+              'Enrich captured elements with 271, Plan PDF, and EDI structures.'
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
+              external: ['Provider websites', 'Assistance program datasets', 'Community healthcare datasets']
+            },
+            references: [{ label: 'Affordability Pathways data references', url: '#' }]
+          },
+          {
+            name: 'Junction Box: Provider Selection',
+            focus: 'Validate network status against a user’s precise insurance tier and recommend lower cost, in-network options.',
+            steps: [
+              'Crawl provider network sources and ingest provider profiles.',
+              'Enrich with Plan PDF and pricing data.',
+              'Embed network validation checks into the consumer flow.'
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
+              external: ['Provider websites', 'Medical journal data']
+            },
+            references: [{ label: 'Provider selection references', url: '#' }]
+          },
+          {
+            name: 'Junction Box: Clinical Sponsored Opportunities',
+            focus: 'Surface discounted imaging, after-hours slots, and provider-funded clinical opportunities that are often missed.',
+            steps: [
+              'Crawl sponsor program feeds and ingest profiles.',
+              'Ingest third-party aggregator APIs and enrich with platform-level crawled data.'
+            ],
+            datasets: {
+              internal: ['User behavioral data'],
+              external: ['Provider websites', 'Medical journals']
+            },
+            references: [{ label: 'Clinical Sponsored Opportunities data references', url: '#' }]
+          },
+          {
+            name: 'Junction Box: Payer Advisor',
+            focus: 'Convert plan variables into personalized guidance for plan comparison, break-even points, and claim-level cost expectations.',
+            steps: [
+              'Crawl target payer and provider sources.',
+              'Orchestrate multi-source datasets into a coherent decision layer.',
+              'Enrich with Plan PDF architectures.'
+            ],
+            datasets: {
+              internal: ['271 & Plan PDF documents', 'EDI Data', 'Claim settlement Data'],
+              external: ['Payer websites', 'Plan master datasets', 'Benefit structure datasets']
+            },
+            references: [{ label: 'Payer Advisor data references', url: '#' }]
+          }
+        ]
+      },
+      {
+        id: 'product-team',
+        title: 'Product Team Ecosystem',
+        outcome: 'Unified behavioral, operational, and healthcare intelligence to improve journeys, launch capabilities, and optimize engagement.',
+        intro: 'Data-backed product intelligence for adoption, retention, and experience optimization.',
+        capabilities: [
+          {
+            name: 'Consumer Journey Intelligence',
+            focus: 'Understand navigation behavior, abandonment points, and friction to optimize search and affordability workflows.',
+            steps: [
+              'Ingest behavioral events into the data platform.',
+              'Enable real-time event stream orchestration layers.'
+            ],
+            datasets: {
+              internal: ['Application interaction events', 'Session telemetry', 'User engagement metrics', 'Search clickstream data', 'AI interaction logs', 'Pendo tracking'],
+              external: []
+            },
+            references: []
+          },
+          {
+            name: 'Feature Performance Intelligence',
+            focus: 'Measure adoption, retention impact, and engagement quality to prioritize roadmap investment.',
+            steps: ['Deploy a centralized product analytics layer for feature-level metrics.'],
+            datasets: {
+              internal: ['Feature usage telemetry', 'Funnel analytics', 'Retention cohorts', 'User segmentation datasets', 'Pendo records'],
+              external: []
+            },
+            references: []
+          },
+          {
+            name: 'Voice of Customer & Sentiment Intelligence',
+            focus: 'Harvest structured and unstructured feedback to identify trust gaps and emerging consumer concerns.',
+            steps: [
+              'Deploy VOC ingestion and classification.',
+              'Build market demand pipelines for healthcare demand datasets.'
+            ],
+            datasets: {
+              internal: ['Support tickets', 'User reviews', 'Chat response feedback', 'Chatbot logs', 'Survey responses', 'Session replay metadata', 'Medical taxonomy datasets'],
+              external: ['Geographic demand indicators']
+            },
+            references: [{ label: 'Voice of Customer & Sentiment references', url: '#' }]
+          }
+        ]
+      },
+      {
+        id: 'business-team',
+        title: 'Business Team (MIS / Strategy)',
+        outcome: 'Integrated ecosystem intelligence and monetization visibility for growth, partnerships, and sustainable revenue.',
+        intro: 'Business intelligence that aligns commercial strategy and operational performance.',
+        capabilities: [
+          {
+            name: 'Ecosystem Performance Intelligence',
+            focus: 'Evaluate platform health, marketplace interactions, and partner performance across payers and providers.',
+            steps: [
+              'Deploy a unified partner intelligence layer backed by operational and external data sources.'],
+            datasets: {
+              internal: ['Provider engagement data', 'Payer referral datasets', 'Marketplace transaction records', 'Partnership performance metrics', 'Regional growth metrics', 'Clinical sponsorship datasets'],
+              external: ['Trusted healthcare reports']
+            },
+            references: [{ label: 'Ecosystem Performance references', url: '#' }]
+          },
+          {
+            name: 'Operational MIS & Executive Intelligence',
+            focus: 'Provide near real-time executive visibility for KPI monitoring, forecasting, and strategic action.',
+            steps: ['Build a centralized executive reporting layer with curated KPIs and dashboards.'],
+            datasets: {
+              internal: ['Executive KPI datasets', 'Operational metrics', 'Growth analytics', 'Customer acquisition datasets', 'Platform performance metrics'],
+              external: []
+            },
+            references: []
+          }
+        ]
+      },
+      {
+        id: 'revenue-finance',
+        title: 'Revenue & Finance Team',
+        outcome: 'Financial intelligence, revenue visibility, and forecasting to support sustainable platform growth.',
+        intro: 'Revenue, cost, and governance insight for scalable business outcomes.',
+        capabilities: [
+          {
+            name: 'Financial Planning: Show Me the Money',
+            focus: 'Simulate revenue scenarios, break-even outcomes, and prioritize initiatives with growth-facing financial intelligence.',
+            steps: ['Implement centralized revenue intelligence pipelines and RevOps attribution datasets.'],
+            datasets: {
+              internal: ['Partner revenue data', 'Affordability revenue metrics', 'Acquisition channel metrics', 'Referral payout datasets', 'Product adoption metrics'],
+              external: ['HRSA Health Professional Shortage Areas']
+            },
+            references: []
+          },
+          {
+            name: 'Compliance, Audit & Governance Ready',
+            focus: 'Expose audit-ready financial lineage and governance metrics to support external compliance standards.',
+            steps: ['Establish audit-ready reconciliation datasets and financial governance metrics.'],
+            datasets: {
+              internal: ['Financial audit logs', 'Revenue lineage datasets', 'Partner payout records'],
+              external: []
+            },
+            references: []
+          }
+        ]
+      },
+      {
+        id: 'support-team',
+        title: 'Support Team Hub',
+        outcome: 'Unified consumer context and operational intelligence for faster, more accurate support resolution.',
+        intro: 'Support intelligence that reduces effort and improves outcomes with contextual consumer data.',
+        capabilities: [
+          {
+            name: 'Consumer Support Intelligence',
+            focus: 'Give agents a unified view of consumer details, insurance, interactions, and next-best actions.',
+            steps: ['Consolidate profiles, insurance status, interaction history, and support activity into a support console view.'],
+            datasets: {
+              internal: ['Consumer profile datasets', 'Eligibility datasets', 'Product interaction history', 'Chatbot logs', 'Support case history', 'Claims guidance history'],
+              external: []
+            },
+            references: []
+          },
+          {
+            name: 'Support Operations Intelligence',
+            focus: 'Monitor CSAT, issue volumes, and escalation behavior to remove recurring healthcare navigation obstacles.',
+            steps: ['Implement analytics that continuously processes support metrics and operational logs for real-time insight.'],
+            datasets: {
+              internal: ['Ticket volumes', 'Resolution TAT', 'CSAT metrics', 'Support interaction logs', 'Agent escalation records', 'Journey abandonment datasets'],
+              external: []
+            },
+            references: []
+          }
+        ]
+      }
+    ]
+  };
+
+  const state = {
+    view: 'landing',
+    activeCategory: platformDataRegistry.categories[0].id,
+    activeCapability: 0
+  };
+
+  const app = document.getElementById('app');
+  const tooltip = document.getElementById('tooltip');
+
+  function render() {
+    app.innerHTML = '';
+    if (state.view === 'landing') { renderLanding(); }
+    else if (state.view === 'category') { renderCategoryExplorer(); }
+    else { renderCapabilityDetail(); }
+  }
+
+  function renderLanding() {
+    const categories = platformDataRegistry.categories;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'mx-auto max-w-7xl';
+    wrapper.innerHTML = `
+      <div class="mb-8 flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
+        <div class="max-w-2xl space-y-4">
+          <div class="inline-flex items-center gap-3 rounded-full bg-slate-800/80 px-4 py-2 text-sm text-slate-300 ring-1 ring-slate-500/40">Unified Data Platform Backend</div>
+          <h1 class="text-4xl font-semibold tracking-tight text-white sm:text-5xl">Patient.com Data Architecture Explorer</h1>
+          <p class="text-slate-300 text-lg leading-8">A unified data platform serves as the intelligent backend that transforms raw data and inputs to provide personalized user experience and guidance.</p>
+          <p class="text-slate-400 max-w-xl">Click a category to explore the end-to-end architecture, capability flows, and dataset vault for consumer portal, product, business, finance, and support teams.</p>
+        </div>
+        <div class="flex flex-col gap-3 text-right text-slate-400 sm:text-left">
+          <div class="rounded-3xl bg-slate-800/80 p-4 ring-1 ring-slate-500/30">Fast client-side SPA architecture<br>Zero build, GitHub Pages-ready</div>
+          <div class="rounded-3xl bg-slate-800/80 p-4 ring-1 ring-slate-500/30">Interactive deep architecture flow<br>Landing → Category → Capability</div>
+        </div>
+      </div>
+      <div class="relative overflow-hidden rounded-[2rem] border border-slate-700/70 bg-slate-950/80 p-6 shadow-2xl shadow-slate-950/40">
+        <div class="grid gap-6 lg:grid-cols-[1.5fr_auto]">
+          <div class="space-y-6">
+            <div class="space-y-3">
+              <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Stage 0</div>
+              <h2 class="text-3xl font-semibold text-white">Landing View — Unified Dashboard Ecosystem</h2>
+              <p class="text-slate-400">Start from a core backend hub, then branch into high-impact category cards with pulsating click cues.</p>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-1">
+              <div class="rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-5 shadow-xl shadow-slate-950/20">
+                <div class="mb-3 flex items-center justify-between gap-3 text-sm text-slate-400"><span>Core hub</span><span class="rounded-full bg-cyan-500/10 px-3 py-1 text-cyan-200">Backend</span></div>
+                <p class="text-slate-300">A central core labeled “Unified Data Platform Backend” with radiating dynamic nodes and category cards in an overlapping circular grid.</p>
+              </div>
+              <div class="rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-5 shadow-xl shadow-slate-950/20">
+                <div class="mb-3 flex items-center justify-between gap-3 text-sm text-slate-400"><span>Interaction prompt</span><span class="rounded-full bg-amber-500/10 px-3 py-1 text-amber-200">✨ Click</span></div>
+                <p class="text-slate-300">Each card features a pulsating accent corner and micro-copy: “✨ Click to expand data pipeline models”.</p>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-[2rem] border border-slate-700/70 bg-gradient-to-br from-slate-950 to-slate-900 p-5">
+            <div class="grid gap-4 sm:grid-cols-2">
+              ${categories.map((category, idx) => `
+                <button data-category="${category.id}" class="group rounded-[1.5rem] border border-slate-700/70 bg-slate-950/90 p-6 text-left transition will-change-transform duration-300 hover:-translate-y-1 hover:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40 ${idx === 0 ? 'pulse-glow' : ''}">
+                  <div class="mb-2 flex items-center justify-between gap-3">
+                    <span class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Category</span>
+                    <span class="rounded-full bg-cyan-400/10 px-3 py-1 text-cyan-200">Click to expand</span>
+                  </div>
+                  <h3 class="text-xl font-semibold text-white">${category.title}</h3>
+                  <p class="mt-3 text-slate-400">${category.intro}</p>
+                </button>
+              `).join('')}
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    wrapper.querySelectorAll('button[data-category]').forEach(button => {
+      button.addEventListener('click', () => {
+        state.activeCategory = button.dataset.category;
+        state.activeCapability = 0;
+        state.view = 'category';
+        render();
+      });
+    });
+    app.appendChild(wrapper);
+  }
+
+  function renderCategoryExplorer() {
+    const category = platformDataRegistry.categories.find(cat => cat.id === state.activeCategory);
+    const wrapper = document.createElement('div');
+    const categoriesMarkup = platformDataRegistry.categories.map(cat => `
+      <button data-cat="${cat.id}" class="rounded-full px-4 py-2 text-sm transition ${cat.id === category.id ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${cat.title}</button>
+    `).join('');
+    const capabilityCards = category.capabilities.map((cap, index) => `
+      <button data-cap="${index}" class="group rounded-[1.75rem] border border-slate-700/70 bg-slate-950/90 p-6 text-left transition duration-300 hover:-translate-y-1 hover:border-cyan-400/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/40">
+        <div class="mb-3 flex items-center justify-between gap-3">
+          <span class="rounded-full bg-amber-200/10 px-3 py-1 text-amber-200">🔍 Inspect data steps & lookup models</span>
+          <span class="text-sm text-slate-400">Capability</span>
+        </div>
+        <h3 class="text-2xl font-semibold text-white">${cap.name}</h3>
+        <p class="mt-3 line-clamp-4 text-slate-400">${cap.focus}</p>
+      </button>
+    `).join('');
+
+    wrapper.innerHTML = `
+      <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <button id="back-to-landing" class="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/90 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-400/50 hover:text-cyan-100">← Back to landing</button>
+          <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Stage 1</div>
+          <h2 class="text-4xl font-semibold text-white">Category Explorer</h2>
+          <p class="mt-2 max-w-2xl text-slate-400">${category.outcome}</p>
+        </div>
+        <div class="space-y-2 rounded-[1.75rem] border border-slate-700/70 bg-slate-950/80 px-5 py-4 text-slate-300">
+          <p class="text-sm uppercase tracking-[0.24em] text-slate-400">Selected Category</p>
+          <div class="text-lg font-semibold text-white">${category.title}</div>
+        </div>
+      </div>
+      <div class="mb-6 flex flex-wrap items-center gap-3 overflow-x-auto rounded-[2rem] border border-slate-700/70 bg-slate-950/80 p-3 tab-line">${categoriesMarkup}</div>
+      <div class="grid gap-5 xl:grid-cols-[1.2fr_0.8fr]">
+        <div class="space-y-4">
+          <div class="rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+            <div class="mb-4 flex items-center justify-between gap-3">
+              <div>
+                <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Capability cluster</div>
+                <h3 class="text-2xl font-semibold text-white">${category.title} capabilities</h3>
+              </div>
+            </div>
+            <div class="grid gap-4 md:grid-cols-2">${capabilityCards}</div>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+            <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Overview</div>
+            <p class="mt-3 text-slate-400">${category.intro}</p>
+            <div class="mt-6 space-y-3 text-slate-300">
+              <div class="rounded-3xl bg-slate-900/80 p-4 ring-1 ring-slate-700/70">
+                <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Capability count</div>
+                <p class="mt-2 text-2xl font-semibold text-white">${category.capabilities.length}</p>
+              </div>
+              <div class="rounded-3xl bg-slate-900/80 p-4 ring-1 ring-slate-700/70">
+                <div class="text-xs uppercase tracking-[0.24em] text-slate-400">Category outcome</div>
+                <p class="mt-2 text-slate-300">${category.outcome}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    `;
+    app.appendChild(wrapper);
+    wrapper.querySelector('#back-to-landing').addEventListener('click', () => { state.view = 'landing'; render(); });
+    wrapper.querySelectorAll('[data-cat]').forEach(button => button.addEventListener('click', () => {
+      state.activeCategory = button.dataset.cat; state.activeCapability = 0; render();
+    }));
+    wrapper.querySelectorAll('[data-cap]').forEach(button => button.addEventListener('click', () => {
+      state.activeCapability = Number(button.dataset.cap); state.view = 'capability'; render();
+    }));
+  }
+
+  function renderCapabilityDetail() {
+    const category = platformDataRegistry.categories.find(cat => cat.id === state.activeCategory);
+    const capability = category.capabilities[state.activeCapability];
+    const categoriesMarkup = platformDataRegistry.categories.map(cat => `
+      <button data-cat="${cat.id}" class="rounded-full px-4 py-2 text-sm transition ${cat.id === category.id ? 'bg-cyan-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${cat.title}</button>
+    `).join('');
+    const capabilityPills = category.capabilities.map((cap, idx) => `
+      <button data-cap="${idx}" class="rounded-full px-3 py-2 text-sm transition ${idx === state.activeCapability ? 'bg-emerald-400 text-slate-950' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">${cap.name}</button>
+    `).join('');
+
+    const internalRows = capability.datasets.internal.length ? capability.datasets.internal.map(item => `<li class="rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${item}</li>`).join('') : '<li class="text-slate-500">No internal datasets defined.</li>';
+    const externalRows = capability.datasets.external.length ? capability.datasets.external.map(item => `<li class="rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${item}</li>`).join('') : '<li class="text-slate-500">No external datasets defined.</li>';
+
+    const references = capability.references.length ? capability.references.map(ref => `<button data-url="${ref.url}" class="rounded-2xl border border-slate-700/70 bg-slate-900/90 px-4 py-3 text-left text-slate-200 transition hover:bg-cyan-500/10">${ref.label}</button>`).join('') : '<p class="text-slate-500">No references available.</p>';
+    const steps = capability.steps.map(step => `<li class="mb-3 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-4 text-slate-300"><span class="block text-sm font-semibold text-white">•</span><p class="mt-2 leading-7">${step}</p></li>`).join('');
+
+    const potentialQuestions = capability.potentialQuestions ? capability.potentialQuestions.map(question => `<li class="mb-3 rounded-2xl border border-slate-700/70 bg-slate-950/90 px-4 py-3 text-slate-300">${question}</li>`).join('') : '<li class="text-slate-500">No potential questions defined.</li>';
+
+    const wrapper = document.createElement('div');
+    wrapper.innerHTML = `
+      <div class="mb-6 flex flex-col gap-4 xl:flex-row xl:items-end xl:justify-between">
+        <div>
+          <button id="back-to-category" class="mb-2 inline-flex items-center gap-2 rounded-full border border-slate-700/80 bg-slate-900/90 px-4 py-2 text-sm text-slate-300 transition hover:border-cyan-400/50 hover:text-cyan-100">← Back to category</button>
+          <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Stage 2</div>
+          <h2 class="text-4xl font-semibold text-white">Deep Architecture View</h2>
+          <p class="mt-2 max-w-2xl text-slate-400">Deep dive into workflow execution and dataset vault structure for the selected capability.</p>
+        </div>
+        <div class="flex flex-wrap gap-3 text-sm text-slate-300">
+          <span class="rounded-3xl bg-slate-900/80 px-4 py-3 ring-1 ring-slate-700/50">${category.title}</span>
+          <span class="rounded-3xl bg-slate-900/80 px-4 py-3 ring-1 ring-slate-700/50">${capability.name}</span>
+        </div>
+      </div>
+      <div class="mb-4 overflow-x-auto rounded-[2rem] border border-slate-700/70 bg-slate-950/80 p-3 tab-line">${categoriesMarkup}</div>
+      <div class="mb-6 overflow-x-auto rounded-[2rem] border border-slate-700/70 bg-slate-950/80 p-3 tab-line">${capabilityPills}</div>
+      <div class="grid gap-6 xl:grid-cols-[1.2fr_0.9fr]">
+        <div class="space-y-6 rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+          <div class="mb-4 flex flex-col gap-3 rounded-3xl bg-slate-900/80 p-5 ring-1 ring-slate-700/70">
+            <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Execution Logic</div>
+            <h3 class="text-2xl font-semibold text-white">${capability.name}</h3>
+            <p class="text-slate-400">${capability.focus}</p>
+          </div>
+          <div>
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div class="text-sm uppercase tracking-[0.24em] text-emerald-300/80">Workflow steps</div>
+                <p class="text-slate-400 text-sm">Bulk ingestion, orchestration, enrichment, and inference-ready output.</p>
+              </div>
+            </div>
+            <ul>${steps}</ul>
+          </div>
+          <div>
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div class="text-sm uppercase tracking-[0.24em] text-amber-300/80">Potential questions</div>
+                <p class="text-slate-400 text-sm">Key product and business questions to validate the capability.</p>
+              </div>
+            </div>
+            <ul>${potentialQuestions}</ul>
+          </div>
+        </div>
+        <div class="space-y-6">
+          <div class="rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+            <div class="mb-4 flex items-center justify-between gap-4">
+              <div>
+                <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">Data Vault</div>
+                <p class="text-slate-400 text-sm">Split view of internal and external datasets with clickable references.</p>
+              </div>
+            </div>
+            <div class="grid gap-4 sm:grid-cols-2">
+              <div class="space-y-3 rounded-3xl border border-slate-700/70 bg-slate-900/80 p-4">
+                <div class="text-sm uppercase tracking-[0.24em] text-slate-400">Internal datasets</div>
+                <ul class="space-y-2">${internalRows}</ul>
+              </div>
+              <div class="space-y-3 rounded-3xl border border-slate-700/70 bg-slate-900/80 p-4">
+                <div class="text-sm uppercase tracking-[0.24em] text-slate-400">External datasets</div>
+                <ul class="space-y-2">${externalRows}</ul>
+              </div>
+            </div>
+          </div>
+          <div class="rounded-[2rem] border border-slate-700/70 bg-slate-950/90 p-6 shadow-xl shadow-slate-950/20">
+            <div class="text-sm uppercase tracking-[0.24em] text-cyan-300/90">References</div>
+            <div class="mt-4 grid gap-3">${references}</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    app.appendChild(wrapper);
+    wrapper.querySelector('#back-to-category').addEventListener('click', () => { state.view = 'category'; render(); });
+    wrapper.querySelectorAll('[data-cat]').forEach(button => button.addEventListener('click', () => {
+      state.activeCategory = button.dataset.cat; state.activeCapability = 0; state.view = 'category'; render();
+    }));
+    wrapper.querySelectorAll('[data-cap]').forEach(button => button.addEventListener('click', () => {
+      state.activeCapability = Number(button.dataset.cap); render();
+    }));
+    wrapper.querySelectorAll('[data-url]').forEach(button => button.addEventListener('click', () => {
+      const url = button.dataset.url;
+      if (url === '#') {
+        alert('Reference links are placeholders for interactive asset modals.');
+      } else {
+        window.open(url, '_blank');
+      }
+    }));
+  }
+
+  function showTooltip(event, term) {
+    const content = tooltipDictionary[term] || 'Definition unavailable.';
+    tooltip.textContent = content;
+    tooltip.style.left = event.pageX + 16 + 'px';
+    tooltip.style.top = event.pageY + 16 + 'px';
+    tooltip.classList.remove('hidden');
+  }
+
+  function hideTooltip() {
+    tooltip.classList.add('hidden');
+  }
+
+  function attachGlossary() {
+    document.querySelectorAll('[data-term]').forEach(element => {
+      element.addEventListener('mouseenter', event => showTooltip(event, element.dataset.term));
+      element.addEventListener('mousemove', event => showTooltip(event, element.dataset.term));
+      element.addEventListener('mouseleave', hideTooltip);
+    });
+  }
+
+  document.addEventListener('DOMContentLoaded', () => {
+    render();
+    app.addEventListener('mouseover', attachGlossary);
+  });
+</script>
+</body>
+</html>
